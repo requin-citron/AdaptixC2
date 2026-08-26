@@ -1,23 +1,13 @@
 services:
-  adaptix:
-    build:
-      context: .
-      target: runtime
-    image: adaptix-server:local
-    container_name: adaptix
-    restart: unless-stopped
-    environment:
-      - TZ=${TZ:-Europe/Paris}
+  adaptix-server-runtime:
     volumes:
-      - ./AdaptixServer/server-dist/data:/app/data
-      - ./AdaptixServer/server-dist/profile.yaml:/app/profile.yaml:ro
       # --- Extensions -------------------------------------------------------
       # À décommenter SEULEMENT après
       #   docker compose --profile build-extenders up
       # Un bind mount d'un dossier hôte vide masque les extenders de l'image et
       # le teamserver refuse de démarrer, sans message explicite.
-      # - ./AdaptixServer/server-dist/extenders:/app/extenders
-      # - ./AdaptixServer/server-dist/scripts:/app/scripts
+      - ./AdaptixServer/server-dist/extenders:/app/extenders
+      - ./AdaptixServer/server-dist/scripts:/app/scripts
 
     # Ports des listeners NON-HTTP (DNS, TCP brut) : plus de host networking,
     # donc il faut les publier explicitement. Garde la liste courte, chaque
@@ -25,9 +15,20 @@ services:
     # ports:
     #   - "53:53/udp"
     #   - "9000-9004:9000-9004"
-
+    
+    # Compose refuse : "mutually exclusive network_mode and networks".
+    network_mode: !reset null
     networks:
       - traefik-servicenet
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 8G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
     labels:
       - traefik.enable=true
@@ -37,6 +38,7 @@ services:
       - traefik.http.routers.ts.rule=Host(`tata.example`)
       - traefik.http.routers.ts.entrypoints=web-secure
       - traefik.http.routers.ts.service=ts
+      - traefik.http.routers.ts.tls.certresolver=acmeletsenc
       - traefik.http.services.ts.loadbalancer.server.port=4321
       - traefik.http.services.ts.loadbalancer.server.scheme=https
       - traefik.http.services.ts.loadbalancer.serverstransport=skipverify-certificate@file
@@ -45,20 +47,8 @@ services:
       - traefik.http.routers.lis1.rule=Host(`toto.example`)
       - traefik.http.routers.lis1.entrypoints=web-secure
       - traefik.http.routers.lis1.service=lis1
+      - traefik.http.routers.lis1.tls.certresolver=acmeletsenc
       - traefik.http.services.lis1.loadbalancer.server.port=8080
-
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
-    deploy:
-      resources:
-        limits:
-          cpus: "8.0"
-          memory: 8G
-        reservations:
-          cpus: "1.0"
-          memory: 1G
 
 networks:
   traefik-servicenet:
