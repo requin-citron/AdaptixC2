@@ -8,6 +8,7 @@ services:
       # le teamserver refuse de démarrer, sans message explicite.
       - ./AdaptixServer/server-dist/extenders:/app/extenders
       - ./AdaptixServer/server-dist/scripts:/app/scripts
+      - /agent_code:/agent_code:ro
 
     # Ports des listeners NON-HTTP (DNS, TCP brut) : plus de host networking,
     # donc il faut les publier explicitement. Garde la liste courte, chaque
